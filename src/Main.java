@@ -1,5 +1,7 @@
 /**
+ * Main Java file. Includes database connection and data management
  * 
+ * Connection, table creation, and data insertion from this tutorial by mintype on YouTube: https://youtu.be/nAEX7kqfM_o?is=keSxFtF6p32KHLwZ
  * @author Olivia Schmick and Claire Wilkening
  */
 
@@ -10,12 +12,18 @@ import java.sql.SQLException;
 public class Main {
   public static void main(String[] args) {
     connect();
-    createNewTable();
-    insert("harsw013-1", "10.1.3.192", "AB:CD:EF:12:34", "WS-C2960-48TC-L", "15.0(2)SE11");
-    printTable();
+    createSwitchTable();
+    createIDFTable();
+    insertSwitch("harsw013-1", "10.1.3.192", "AB:CD:EF:12:34", "WS-C2960-48TC-L", "15.0(2)SE11");
+    insertIDFs(2, "Li", "059");
+    printSwitchTable();
+    printIDFTable();
   }
 
-  private static void printTable() {
+  /**
+   * Prints Switch table, columns separated by tabs.
+   */
+  private static void printSwitchTable() {
     String url = "jdbc:sqlite:inventory.db";
     String sql = "SELECT * FROM Switches";
 
@@ -24,12 +32,33 @@ public class Main {
          java.sql.ResultSet rs = stmt.executeQuery(sql)) {
 
       while (rs.next()) {
-        System.out.println(rs.getInt("id") + "\t" +
+        System.out.println(rs.getInt("swid") + "\t" +
                            rs.getString("hostname") + "\t" +
                            rs.getString("ip") + "\t" +
                            rs.getString("mac") + "\t" +
                            rs.getString("model") + "\t" +
                            rs.getString("swversion"));
+      }
+    } catch (SQLException e) {
+      System.out.println("Error: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Prints IDF table, columns separated by tabs.
+   */
+  private static void printIDFTable() {
+    String url = "jdbc:sqlite:inventory.db";
+    String sql = "SELECT * FROM IDFs";
+
+    try (Connection conn = DriverManager.getConnection(url);
+         java.sql.Statement stmt = conn.createStatement();
+         java.sql.ResultSet rs = stmt.executeQuery(sql)) {
+
+      while (rs.next()) {
+        System.out.println(rs.getInt("idf") + "\t" +
+                           rs.getString("bn") + "\t" +
+                           rs.getString("room"));
       }
     } catch (SQLException e) {
       System.out.println("Error: " + e.getMessage());
@@ -44,7 +73,7 @@ public class Main {
    * @param model Model of the switch
    * @param swversion SW Version of the switch
    */
-  private static void insert(String hostname, String ip, String mac, String model, String swversion) {
+  private static void insertSwitch(String hostname, String ip, String mac, String model, String swversion) {
     String url = "jdbc:sqlite:inventory.db";
     String sql = "INSERT OR IGNORE INTO Switches(hostname, ip, mac, model, swversion) VALUES(?, ?, ?, ?, ?)";
 
@@ -57,32 +86,82 @@ public class Main {
       pstmt.setString(4, model);
       pstmt.setString(5, swversion);
       pstmt.executeUpdate();
-      System.out.println("Data created.");
+      System.out.println("Switch data created.");
     } catch (SQLException e) {
       System.out.println("Error: " + e.getMessage());
     }
   }
 
   /**
-   * Creates new tables Switches and IDFs
+   * Inserts given attributes as a tuple into the IDFs table
+   * @param idf
+   * @param bn
+   * @param room
+   * @param swid
    */
-  private static void createNewTable() {
+  private static void insertIDFs(int idf, String bn, String room) {
+    String url = "jdbc:sqlite:inventory.db";
+    String sql = "INSERT OR IGNORE INTO IDFs(idf, bn, room) VALUES(?, ?, ?)";
+
+    try (Connection conn = DriverManager.getConnection(url);
+         java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+      pstmt.setInt(1, idf);
+      pstmt.setString(2, bn);
+      pstmt.setString(3, room);
+      pstmt.executeUpdate();
+      System.out.println("IDF data created.");
+    } catch (SQLException e) {
+      System.out.println("Error: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Creates new table 'Switches'
+   */
+  private static void createSwitchTable() {
     String url = "jdbc:sqlite:inventory.db";
 
-    String sql = "CREATE TABLE IF NOT EXISTS Switches (\n" +
-                            "id INTEGER PRIMARY KEY,\n" +
-                            "hostname TEXT NOT NULL,\n" +
-                            "ip TEXT NOT NULL UNIQUE,\n" +
-                            "mac TEXT NOT NULL UNIQUE,\n" +
-                            "model TEXT,\n" +
-                            "swversion TEXT\n" +
-                            ");";
+    // These schemas should change... maybe have something in Switches to point to IDF? 
+    String sql = 
+      "CREATE TABLE IF NOT EXISTS Switches (\n" +
+          "swid INTEGER PRIMARY KEY,\n" +
+          "hostname TEXT NOT NULL,\n" +
+          "ip TEXT NOT NULL UNIQUE,\n" +
+          "mac TEXT NOT NULL UNIQUE,\n" +
+          "model TEXT,\n" +
+          "swversion TEXT\n" +
+      ");";
 
     try (Connection conn = DriverManager.getConnection(url);
          java.sql.Statement stmt = conn.createStatement()) {
 
       stmt.execute(sql);
-      System.out.println("Table created.");
+      System.out.println("Switch table created.");
+    } catch (SQLException e) {
+      System.out.println("Error: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Creates new table 'IDFs'
+   */
+  private static void createIDFTable() {
+    String url = "jdbc:sqlite:inventory.db";
+
+    // These schemas should change... maybe have something in Switches to point to IDF? 
+    String sql = 
+      "CREATE TABLE IF NOT EXISTS IDFs (\n" +
+          "idf INTEGER PRIMARY KEY,\n" +
+          "bn TEXT NOT NULL,\n" +
+          "room TEXT NOT NULL UNIQUE\n" +
+      ");";
+
+    try (Connection conn = DriverManager.getConnection(url);
+         java.sql.Statement stmt = conn.createStatement()) {
+
+      stmt.execute(sql);
+      System.out.println("IDF table created.");
     } catch (SQLException e) {
       System.out.println("Error: " + e.getMessage());
     }
