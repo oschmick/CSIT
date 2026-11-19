@@ -14,7 +14,7 @@ public class Main {
     connect();
     createSwitchTable();
     createIDFTable();
-    insertSwitch("harsw013-1", "10.1.3.192", "AB:CD:EF:12:34", "WS-C2960-48TC-L", "15.0(2)SE11");
+    insertSwitch("harsw013-1", "10.1.3.192", "AB:CD:EF:12:34", "WS-C2960-48TC-L", "15.0(2)SE11", 6);
     insertIDFs(2, "Li", "059");
     printSwitchTable();
     printIDFTable();
@@ -37,7 +37,8 @@ public class Main {
                            rs.getString("ip") + "\t" +
                            rs.getString("mac") + "\t" +
                            rs.getString("model") + "\t" +
-                           rs.getString("swversion"));
+                           rs.getString("swversion") + "\t" +
+                           rs.getString("idf"));
       }
     } catch (SQLException e) {
       System.out.println("Error: " + e.getMessage());
@@ -73,9 +74,9 @@ public class Main {
    * @param model Model of the switch
    * @param swversion SW Version of the switch
    */
-  private static void insertSwitch(String hostname, String ip, String mac, String model, String swversion) {
+  private static void insertSwitch(String hostname, String ip, String mac, String model, String swversion, int idf) {
     String url = "jdbc:sqlite:inventory.db";
-    String sql = "INSERT OR IGNORE INTO Switches(hostname, ip, mac, model, swversion) VALUES(?, ?, ?, ?, ?)";
+    String sql = "INSERT OR IGNORE INTO Switches(hostname, ip, mac, model, swversion, idf) VALUES(?, ?, ?, ?, ?, ?)";
 
     try (Connection conn = DriverManager.getConnection(url);
          java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -85,6 +86,7 @@ public class Main {
       pstmt.setString(3, mac);
       pstmt.setString(4, model);
       pstmt.setString(5, swversion);
+      pstmt.setInt(6, idf);
       pstmt.executeUpdate();
       System.out.println("Switch data created.");
     } catch (SQLException e) {
@@ -122,7 +124,6 @@ public class Main {
   private static void createSwitchTable() {
     String url = "jdbc:sqlite:inventory.db";
 
-    // These schemas should change... maybe have something in Switches to point to IDF? 
     String sql = 
       "CREATE TABLE IF NOT EXISTS Switches (\n" +
           "swid INTEGER PRIMARY KEY,\n" +
@@ -130,7 +131,9 @@ public class Main {
           "ip TEXT NOT NULL UNIQUE,\n" +
           "mac TEXT NOT NULL UNIQUE,\n" +
           "model TEXT,\n" +
-          "swversion TEXT\n" +
+          "swversion TEXT,\n" +
+          "idf INTEGER,\n" +
+          "FOREIGN KEY(idf) REFERENCES Switch(swid)" +
       ");";
 
     try (Connection conn = DriverManager.getConnection(url);
@@ -149,12 +152,11 @@ public class Main {
   private static void createIDFTable() {
     String url = "jdbc:sqlite:inventory.db";
 
-    // These schemas should change... maybe have something in Switches to point to IDF? 
     String sql = 
       "CREATE TABLE IF NOT EXISTS IDFs (\n" +
           "idf INTEGER PRIMARY KEY,\n" +
           "bn TEXT NOT NULL,\n" +
-          "room TEXT NOT NULL UNIQUE\n" +
+          "room TEXT NOT NULL\n" +
       ");";
 
     try (Connection conn = DriverManager.getConnection(url);
